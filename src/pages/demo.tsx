@@ -148,7 +148,7 @@ export default function Demo() {
     <div className="min-h-[calc(100vh-60px)] bg-muted/10 p-4 md:p-8">
       <div className="mx-auto max-w-7xl space-y-6 md:space-y-8">
 
-        <div className="animate-in fade-in slide-in-from-left-4 duration-500">
+        <div className="animate-in fade-in slide-in-from-left-4 duration-500 print:hidden">
           <Button variant="ghost" asChild className="pl-0 hover:pl-2 transition-all">
             <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
               <ArrowLeft className="h-4 w-4" /> Back to Home

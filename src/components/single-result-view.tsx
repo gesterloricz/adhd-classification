@@ -2,7 +2,7 @@ import { useState } from "react"
 import {
   CheckCircle2, AlertTriangle, RotateCcw, FileText,
   BarChart3, ArrowUpRight, ArrowDownRight,
-  Loader2
+  Loader2, Printer
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -37,7 +37,7 @@ function PredictionCard({
   return (
     <Card className={cn(
       "flex flex-col border-2 bg-card shadow-sm",
-      isBaseline ? "border-muted" : "border-primary/20"
+      isBaseline ? "border-muted print:hidden" : "border-primary/20 print:border-black print:shadow-none print:border"
     )}>
       <CardHeader className="pb-2">
         <CardTitle className="text-lg">{title}</CardTitle>
@@ -235,11 +235,35 @@ export default function SingleResultView({
   }
 
   return (
-    <div className={cn("w-full space-y-6 transition-opacity", isRerunning && "opacity-60 pointer-events-none")}>
+    <div className={cn("w-full space-y-6 transition-opacity print:space-y-8 print:bg-white print:text-black", isRerunning && "opacity-60 pointer-events-none")}>
+
+      {/* ── PRINT-ONLY HEADER ── */}
+      <div className="hidden print:block space-y-4 pb-6 border-b-2 border-black">
+        <div className="flex justify-between items-end">
+          <div>
+            <h1 className="text-3xl font-bold text-black tracking-tight">Clinical EEG Analysis Report</h1>
+            <p className="text-muted-foreground font-medium mt-1">Automated ADHD Classification System</p>
+          </div>
+          <div className="text-right text-sm text-muted-foreground">
+            <p><strong>Date:</strong> {new Date().toLocaleDateString()}</p>
+            <p><strong>Time:</strong> {new Date().toLocaleTimeString()}</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-6 text-sm pt-4">
+          <div>
+            <p className="mb-2"><strong>Patient/Subject ID:</strong> _________________________</p>
+            <p><strong>Source File:</strong> <span className="font-mono text-xs">{result.filename}</span></p>
+          </div>
+          <div>
+            <p className="mb-2"><strong>Evaluator:</strong> _________________________</p>
+            <p><strong>Dataset Ref:</strong> {result.dataset_label}</p>
+          </div>
+        </div>
+      </div>
 
       {/* File header */}
       {standalone && (
-        <Card className="border-2 border-primary/10 bg-card shadow-sm">
+        <Card className="border-2 border-primary/10 bg-card shadow-sm print:hidden">
           <CardHeader className="flex flex-row items-center justify-between py-4">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
@@ -250,36 +274,45 @@ export default function SingleResultView({
                 <CardDescription className="font-mono text-xs">{result.filename}</CardDescription>
               </div>
             </div>
-            <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-              <AlertDialogTrigger asChild>
-                <Button size="sm" variant="outline" className="h-8">
-                  {isRerunning
-                    ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                    : <RotateCcw className="mr-2 h-3.5 w-3.5" />}
-                  New Analysis
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Start new analysis?</AlertDialogTitle>
-                  <AlertDialogDescription>This will clear the current result.</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleConfirm}>Yes, continue</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <div className="flex items-center gap-2 print:hidden">
+              <Button size="sm" variant="outline" className="h-8" onClick={() => window.print()}>
+                <Printer className="mr-2 h-3.5 w-3.5" />
+                Print Result
+              </Button>
+              <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" variant="outline" className="h-8">
+                    {isRerunning
+                      ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                      : <RotateCcw className="mr-2 h-3.5 w-3.5" />}
+                    New Analysis
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Start new analysis?</AlertDialogTitle>
+                    <AlertDialogDescription>This will clear the current result.</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleConfirm}>Yes, continue</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </CardHeader>
         </Card>
       )}
 
       {/* ── SECTION 1: This file's prediction (what actually matters) ── */}
       <div>
-        <p className="mb-3 text-sm font-semibold text-foreground">
+        <p className="mb-3 text-sm font-semibold text-foreground print:hidden">
           Prediction for this file
         </p>
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <p className="mb-3 text-lg font-bold text-black hidden print:block">
+          System Analysis Result
+        </p>
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 print:grid-cols-1 print:gap-4">
           <PredictionCard
             title="Baseline Model" description="Standard XGBoost"
             isBaseline={true}
@@ -299,6 +332,23 @@ export default function SingleResultView({
             filename={result.filename}
           />
         </div>
+
+        {/* ── PRINT-ONLY INTERPRETATION GUIDE ── */}
+        <div className="hidden print:block mt-6 p-4 rounded-lg border border-gray-300 bg-gray-50 text-sm text-black">
+          <h3 className="font-bold text-base mb-2">Interpretation Guide</h3>
+          <p className="mb-2">
+            The automated system analyzed <strong>{result.total_epochs}</strong> segments (epochs) of the patient's EEG recording.
+            Each segment was evaluated for neurological patterns commonly associated with ADHD, such as specific power spectral density (PSD) distributions and signal entropy.
+          </p>
+          <ul className="list-disc pl-5 space-y-1 mb-3">
+            <li><strong>ADHD Detected:</strong> The majority of the EEG segments exhibited spectral features consistent with the ADHD clinical group in the reference dataset.</li>
+            <li><strong>Control / Non-ADHD:</strong> The majority of the EEG segments exhibited features consistent with the neurotypical (Control) group.</li>
+          </ul>
+          <p>
+            The <strong>Confidence Score ({result.proposed_confidence.toFixed(1)}%)</strong> reflects the statistical certainty of the model across all segments.
+            A higher score indicates stronger consistency in the neurological patterns throughout the entire recording. This is a statistical measurement and should be cross-referenced with behavioral assessments.
+          </p>
+        </div>
       </div>
 
       {/* ── SECTION 2: EEG Viewer ── */}
@@ -313,7 +363,7 @@ export default function SingleResultView({
 
       {/* ── SECTION 3: Training metrics — only shown when showMetrics=true ── */}
       {showMetrics && result.metrics?.baseline && (
-        <div>
+        <div className="print:hidden">
           <p className="mb-3 text-sm font-semibold text-foreground">
             Model training performance on {result.dataset_label}
           </p>
@@ -324,6 +374,32 @@ export default function SingleResultView({
           />
         </div>
       )}
+
+      {/* ── PRINT-ONLY FOOTER ── */}
+      <div className="hidden print:block pt-12 space-y-12 page-break-inside-avoid">
+        <div className="space-y-2">
+          <p className="font-bold text-black">Clinical Notes & Remarks:</p>
+          <div className="h-32 w-full border border-gray-300 rounded p-2"></div>
+        </div>
+
+        <div className="flex justify-between items-end pt-8">
+          <div className="w-64 text-center">
+            <div className="border-b border-black w-full mb-2"></div>
+            <p className="text-sm text-black font-semibold">Psychometrician / Evaluator Signature</p>
+          </div>
+          <div className="w-48 text-center">
+            <div className="border-b border-black w-full mb-2"></div>
+            <p className="text-sm text-black font-semibold">Date</p>
+          </div>
+        </div>
+
+        <div className="pt-8 border-t border-gray-200">
+          <p className="text-xs text-center text-gray-500">
+            This report was generated by an automated EEG analysis system utilizing optimized machine learning models.
+            It is intended to assist and provide objective data metrics, but should not replace formal clinical diagnosis by a licensed healthcare professional.
+          </p>
+        </div>
+      </div>
 
     </div>
   )

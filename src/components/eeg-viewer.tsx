@@ -1,6 +1,8 @@
 import { useMemo, useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Activity, Loader2 } from 'lucide-react'
+import { Activity, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 const EEG_CHANNELS = [
   "Fp1", "Fp2", "F3", "F4", "F7", "F8", "Fz",
@@ -27,6 +29,7 @@ export default function EEGViewer({
   fileName,
 }: EEGViewerProps) {
   const [isLoading, setIsLoading] = useState(true)
+  const [isExpanded, setIsExpanded] = useState(false)
 
   useEffect(() => {
     // Defer rendering to next frame to prevent UI blocking
@@ -248,7 +251,10 @@ export default function EEGViewer({
   return (
     <div className="w-full">
       <Card className="border-border bg-card shadow-sm">
-        <CardHeader className="py-2 px-4">
+        <CardHeader 
+          className="py-2 px-4 cursor-pointer hover:bg-muted/50 transition-colors"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <div className="rounded-lg bg-primary/10 p-1.5">
@@ -261,52 +267,59 @@ export default function EEGViewer({
                 </CardDescription>
               </div>
             </div>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
           </div>
         </CardHeader>
 
-        <CardContent className="overflow-x-auto p-2 w-full">
-          {/* SVG Waveform Display */}
-          <div className="bg-white rounded  w-full flex items-center justify-center" style={{ minHeight: `${Math.max(300, svgHeight * 0.6)}px` }}>
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center gap-2">
-                <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">Loading waveform...</p>
+        <div className={cn("grid transition-all duration-300 ease-in-out", isExpanded ? "grid-rows-[1fr] opacity-100 print:grid-rows-[1fr] print:opacity-100" : "grid-rows-[0fr] opacity-0 print:grid-rows-[1fr] print:opacity-100")}>
+          <div className="overflow-hidden">
+            <CardContent className="overflow-x-auto p-2 w-full pt-0">
+              {/* SVG Waveform Display */}
+              <div className="bg-white rounded w-full flex items-center justify-center" style={{ minHeight: `${Math.max(300, svgHeight * 0.6)}px` }}>
+                {isLoading ? (
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    <p className="text-sm text-muted-foreground">Loading waveform...</p>
+                  </div>
+                ) : (
+                  <svg
+                    width="100%"
+                    height="100%"
+                    viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+                    preserveAspectRatio="xMidYMid meet"
+                    style={{ backgroundColor: 'white', overflow: 'visible', display: 'block', minWidth: '700px' }}
+                  >
+                    {/* Grid */}
+                    {renderGrid()}
+
+                    {/* Waveforms */}
+                    {renderWaveforms()}
+
+                    {/* Channel Labels */}
+                    {renderChannelLabels()}
+
+                    {/* Axes */}
+                    {renderTimeAxis()}
+
+                    {/* Time label */}
+                    <text
+                      x={chartMargin.left + chartWidth / 2}
+                      y={svgHeight - 5}
+                      textAnchor="middle"
+                      fontSize="10"
+                      fontWeight="bold"
+                      fill="#333"
+                    >
+                      Time (s)
+                    </text>
+                  </svg>
+                )}
               </div>
-            ) : (
-              <svg
-                width="100%"
-                height="100%"
-                viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-                preserveAspectRatio="xMidYMid meet"
-                style={{ backgroundColor: 'white', overflow: 'visible', display: 'block' }}
-              >
-                {/* Grid */}
-                {renderGrid()}
-
-                {/* Waveforms */}
-                {renderWaveforms()}
-
-                {/* Channel Labels */}
-                {renderChannelLabels()}
-
-                {/* Axes */}
-                {renderTimeAxis()}
-
-                {/* Time label */}
-                <text
-                  x={chartMargin.left + chartWidth / 2}
-                  y={svgHeight - 5}
-                  textAnchor="middle"
-                  fontSize="10"
-                  fontWeight="bold"
-                  fill="#333"
-                >
-                  Time (s)
-                </text>
-              </svg>
-            )}
+            </CardContent>
           </div>
-        </CardContent>
+        </div>
       </Card>
     </div>
   )
