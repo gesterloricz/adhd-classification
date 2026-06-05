@@ -13,7 +13,9 @@ export type ModelMetricEntry = {
 
 export type TrainingMetrics = {
   baseline: ModelMetricEntry;
+  dart?: ModelMetricEntry;
   proposed: ModelMetricEntry;
+  proposed_base_hp?: ModelMetricEntry;
   trained_on: string;
 };
 

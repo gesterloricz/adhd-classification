@@ -13,7 +13,7 @@ import {
   AlertDialogCancel, AlertDialogAction,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import type { ClassificationResult, ModelMetricEntry } from "../types"
+import type { ClassificationResult, ModelMetricEntry, TrainingMetrics } from "../types"
 import { cn } from "@/lib/utils"
 import EEGViewer from "./eeg-viewer"
 
@@ -111,10 +111,17 @@ function PredictionCard({
 
 // ── Training metrics section (model-level, NOT file-level) ────────────────────
 function TrainingMetricsSection({
-  baseline, proposed, trained_on,
+  metrics, trained_on,
 }: {
-  baseline: ModelMetricEntry; proposed: ModelMetricEntry; trained_on: string
+  metrics: TrainingMetrics; trained_on: string
 }) {
+  const models = [
+    { label: "Baseline XGBoost", key: "baseline" as const, color: "bg-slate-400" },
+    { label: "XGBoost DART", key: "dart" as const, color: "bg-blue-400" },
+    { label: "XGBoost DART-IBL", key: "proposed" as const, color: "bg-primary" },
+    { label: "XGBoost DART-IBL (Base HPs)", key: "proposed_base_hp" as const, color: "bg-purple-400" },
+  ].filter(m => metrics[m.key])
+
   return (
     <div className="space-y-4 rounded-xl border border-border bg-muted/10 p-5">
 
@@ -124,11 +131,11 @@ function TrainingMetricsSection({
         <Badge variant="secondary" className="ml-auto text-[10px]">{trained_on}</Badge>
       </div>
 
-      {/* Four metric cards */}
+      {/* Metric cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {METRIC_KEYS.map(({ key, label }) => {
-          const bv = baseline[key]
-          const pv = proposed[key]
+          const bv = metrics.baseline[key]
+          const pv = metrics.proposed[key]
           const diff = pv - bv
           return (
             <Card key={key} className="border bg-card shadow-sm">
@@ -148,22 +155,21 @@ function TrainingMetricsSection({
                   </span>
                 </div>
                 <div className="space-y-3">
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Baseline</span>
-                      <span className="font-mono">{bv}%</span>
-                    </div>
-                    <Progress value={bv} className="h-1.5 bg-muted" />
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span className="font-bold">Optimized</span>
-                      <span className="font-mono font-bold">{pv}%</span>
-                    </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                      <div className="h-full rounded-full bg-primary/90" style={{ width: `${pv}%` }} />
-                    </div>
-                  </div>
+                  {models.map(m => {
+                    const val = metrics[m.key]![key]
+                    const isProposed = m.key === "proposed"
+                    return (
+                      <div key={m.key} className="space-y-1">
+                        <div className="flex justify-between text-[10px]">
+                          <span className={isProposed ? "font-bold" : "text-muted-foreground"}>{m.label}</span>
+                          <span className={isProposed ? "font-mono font-bold" : "font-mono"}>{val}%</span>
+                        </div>
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                          <div className={cn("h-full rounded-full", m.color)} style={{ width: `${val}%` }} />
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -172,35 +178,28 @@ function TrainingMetricsSection({
       </div>
 
       {/* Confusion matrices */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {[
-          { label: "Baseline XGBoost", stats: baseline },
-          { label: "Optimized XGBoost (DART+IBL)", stats: proposed },
-        ].map(({ label, stats }) => {
-          const [[tn, fp], [fn, tp]] = stats.confusion_matrix
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {models.map((m) => {
+          const [[tn, fp], [fn, tp]] = metrics[m.key]!.confusion_matrix
           return (
-            <div key={label} className="rounded-lg border bg-card p-4">
-              <p className="mb-3 text-xs font-semibold">{label} — Confusion Matrix</p>
+            <div key={m.label} className="rounded-lg border bg-card p-4">
+              <p className="mb-3 text-xs font-semibold">{m.label} — Confusion Matrix</p>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="rounded border bg-emerald-500/10 border-emerald-500/20 p-2 text-center">
                   <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">{tp}</p>
-                  <p className="text-[10px] text-muted-foreground">True Positives</p>
-                  <p className="text-[9px] text-muted-foreground">(Correct ADHD)</p>
+                  <p className="text-[10px] text-muted-foreground">TP</p>
                 </div>
                 <div className="rounded border bg-emerald-500/10 border-emerald-500/20 p-2 text-center">
                   <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">{tn}</p>
-                  <p className="text-[10px] text-muted-foreground">True Negatives</p>
-                  <p className="text-[9px] text-muted-foreground">(Correct Control)</p>
+                  <p className="text-[10px] text-muted-foreground">TN</p>
                 </div>
                 <div className="rounded border bg-red-500/10 border-red-500/20 p-2 text-center">
                   <p className="text-lg font-bold text-red-700 dark:text-red-400">{fn}</p>
-                  <p className="text-[10px] text-muted-foreground">False Negatives</p>
-                  <p className="text-[9px] text-muted-foreground">(Missed ADHD)</p>
+                  <p className="text-[10px] text-muted-foreground">FN</p>
                 </div>
                 <div className="rounded border bg-orange-500/10 border-orange-500/20 p-2 text-center">
                   <p className="text-lg font-bold text-orange-700 dark:text-orange-400">{fp}</p>
-                  <p className="text-[10px] text-muted-foreground">False Positives</p>
-                  <p className="text-[9px] text-muted-foreground">(Wrong ADHD)</p>
+                  <p className="text-[10px] text-muted-foreground">FP</p>
                 </div>
               </div>
             </div>
@@ -218,6 +217,7 @@ interface Props {
   onNewAnalysis?: () => void
   standalone?: boolean
   showMetrics?: boolean  // false in batch mode — metrics shown once at batch level
+  showEEG?: boolean
 }
 
 export default function SingleResultView({
@@ -225,6 +225,7 @@ export default function SingleResultView({
   onNewAnalysis,
   standalone = false,
   showMetrics = true,
+  showEEG = true,
 }: Props) {
   const [isRerunning, setIsRerunning] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -279,26 +280,28 @@ export default function SingleResultView({
                 <Printer className="mr-2 h-3.5 w-3.5" />
                 Print Result
               </Button>
-              <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-                <AlertDialogTrigger asChild>
-                  <Button size="sm" variant="outline" className="h-8">
-                    {isRerunning
-                      ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                      : <RotateCcw className="mr-2 h-3.5 w-3.5" />}
-                    New Analysis
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Start new analysis?</AlertDialogTitle>
-                    <AlertDialogDescription>This will clear the current result.</AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleConfirm}>Yes, continue</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              {onNewAnalysis && (
+                <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                  <AlertDialogTrigger asChild>
+                    <Button size="sm" variant="outline" className="h-8">
+                      {isRerunning
+                        ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                        : <RotateCcw className="mr-2 h-3.5 w-3.5" />}
+                      New Analysis
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Start new analysis?</AlertDialogTitle>
+                      <AlertDialogDescription>This will clear the current result.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleConfirm}>Yes, continue</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </div>
           </CardHeader>
         </Card>
@@ -352,7 +355,7 @@ export default function SingleResultView({
       </div>
 
       {/* ── SECTION 2: EEG Viewer ── */}
-      {result.eeg_data && result.eeg_data.length > 0 && (
+      {showEEG && result.eeg_data && result.eeg_data.length > 0 && (
         <div>
           <p className="mb-3 text-sm font-semibold text-foreground">
             EEG Waveform
@@ -368,8 +371,7 @@ export default function SingleResultView({
             Model training performance on {result.dataset_label}
           </p>
           <TrainingMetricsSection
-            baseline={result.metrics.baseline}
-            proposed={result.metrics.proposed}
+            metrics={result.metrics}
             trained_on={result.metrics.trained_on}
           />
         </div>

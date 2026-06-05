@@ -6,31 +6,27 @@
     "precision": 74.18,
     "recall": 62.92,
     "f1": 68.09,
-    "confusion_matrix": [
-      [
-        18172,
-        2220
-      ],
-      [
-        3758,
-        6377
-      ]
-    ]
+    "confusion_matrix": [[18172, 2220], [3758, 6377]]
+  },
+  "dart": {
+    "accuracy": 82.02,
+    "precision": 74.19,
+    "recall": 70.28,
+    "f1": 72.18,
+    "confusion_matrix": [[17914, 2478], [3012, 7123]]
   },
   "proposed": {
     "accuracy": 80.79,
     "precision": 66.13,
     "recall": 86.41,
     "f1": 74.92,
-    "confusion_matrix": [
-      [
-        15906,
-        4486
-      ],
-      [
-        1377,
-        8758
-      ]
-    ]
+    "confusion_matrix": [[15906, 4486], [1377, 8758]]
+  },
+  "proposed_base_hp": {
+    "accuracy": 78.64,
+    "precision": 63.72,
+    "recall": 82.76,
+    "f1": 72.01,
+    "confusion_matrix": [[15617, 4775], [1747, 8388]]
   }
 }

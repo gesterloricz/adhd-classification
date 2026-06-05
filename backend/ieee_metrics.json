@@ -6,31 +6,27 @@
     "precision": 95.49,
     "recall": 99.11,
     "f1": 97.27,
-    "confusion_matrix": [
-      [
-        331,
-        21
-      ],
-      [
-        4,
-        445
-      ]
-    ]
+    "confusion_matrix": [[331, 21], [4, 445]]
+  },
+  "dart": {
+    "accuracy": 98.63,
+    "precision": 98.24,
+    "recall": 99.33,
+    "f1": 98.78,
+    "confusion_matrix": [[344, 8], [3, 446]]
   },
   "proposed": {
-    "accuracy": 98.5,
+    "accuracy": 98.50,
     "precision": 98.02,
     "recall": 99.33,
     "f1": 98.67,
-    "confusion_matrix": [
-      [
-        343,
-        9
-      ],
-      [
-        3,
-        446
-      ]
-    ]
+    "confusion_matrix": [[343, 9], [3, 446]]
+  },
+  "proposed_base_hp": {
+    "accuracy": 96.88,
+    "precision": 95.69,
+    "recall": 98.89,
+    "f1": 97.26,
+    "confusion_matrix": [[332, 20], [5, 444]]
   }
 }

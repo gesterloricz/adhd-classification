@@ -8,3 +8,4 @@ scipy
 mne
 xgboost
 pydantic
+scikit-learn

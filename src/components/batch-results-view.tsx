@@ -13,9 +13,10 @@ import {
   AlertDialogTitle, AlertDialogDescription, AlertDialogFooter,
   AlertDialogCancel, AlertDialogAction,
 } from "@/components/ui/alert-dialog"
-import type { ClassificationResult, ModelMetricEntry } from "../types"
+import type { ClassificationResult, ModelMetricEntry, TrainingMetrics } from "../types"
 import { cn } from "@/lib/utils"
 import SingleResultView from "./single-result-view"
+import EEGViewer from "./eeg-viewer"
 
 const METRIC_KEYS = [
   { key: "accuracy" as const, label: "Accuracy" },
@@ -67,7 +68,7 @@ export default function BatchResultsView({ results, onNewAnalysis }: Props) {
     <div className={cn("w-full space-y-6 transition-opacity", isRerunning && "opacity-60 pointer-events-none")}>
 
       {/* ── Summary cards ─────────────────────────────────────────────────── */}
-      <Card className="border-2 border-primary/10 bg-card shadow-sm">
+      <Card className="border-2 border-primary/10 bg-card shadow-sm print:hidden">
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle className="flex items-center gap-2 text-lg">
             <Brain className="h-5 w-5 text-primary" />
@@ -124,8 +125,8 @@ export default function BatchResultsView({ results, onNewAnalysis }: Props) {
       </Card>
 
       {/* ── File list ─────────────────────────────────────────────────────── */}
-      <Card className="border bg-card shadow-sm">
-        <CardHeader className="pb-3">
+      <Card className="border bg-card shadow-sm print:border-0 print:shadow-none">
+        <CardHeader className="pb-3 print:hidden">
           <div className="flex flex-wrap items-center gap-2">
             <Users className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-semibold">Classified Files</span>
@@ -152,7 +153,7 @@ export default function BatchResultsView({ results, onNewAnalysis }: Props) {
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-2 p-3 pt-0">
+        <CardContent className="space-y-2 p-3 pt-0 print:p-0">
           {visibleResults.length === 0 && (
             <div className="py-8 text-center text-sm text-muted-foreground">
               No files in this category.
@@ -166,13 +167,13 @@ export default function BatchResultsView({ results, onNewAnalysis }: Props) {
             const baseIsADHD = result.baseline_label === "ADHD Detected"
 
             return (
-              <div key={result.filename} className="overflow-hidden rounded-lg border border-border">
+              <div key={result.filename} className="overflow-hidden rounded-lg border border-border print:border-0 print:rounded-none">
 
                 {/* Row */}
                 <button
                   onClick={() => toggleExpand(result.filename)}
                   className={cn(
-                    "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40",
+                    "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40 print:hidden",
                     isExpanded && "bg-muted/30"
                   )}
                 >
@@ -222,11 +223,12 @@ export default function BatchResultsView({ results, onNewAnalysis }: Props) {
 
                 {/* Expanded: prediction only, NO metrics (shown once below) */}
                 {isExpanded && (
-                  <div className="border-t border-border bg-muted/10 p-4">
+                  <div className="border-t border-border bg-muted/10 p-4 print:border-0 print:p-0 print:bg-transparent">
                     <SingleResultView
                       result={result}
-                      standalone={false}
+                      standalone={true}
                       showMetrics={false}
+                      showEEG={true}
                     />
                   </div>
                 )}
@@ -236,23 +238,16 @@ export default function BatchResultsView({ results, onNewAnalysis }: Props) {
         </CardContent>
       </Card>
 
-      {/* ── Group summaries ───────────────────────────────────────────────── */}
-      {adhdCount > 0 && (
-        <GroupSummary title="ADHD Detected Files" color="orange" files={adhdResults} />
-      )}
-      {controlCount > 0 && (
-        <GroupSummary title="Control (No ADHD) Files" color="emerald" files={controlResults} />
-      )}
+
 
       {/* ── Model training metrics — shown ONCE for the whole batch ───────── */}
       {sharedMetrics?.baseline && (
-        <div>
+        <div className="print:hidden">
           <p className="mb-3 text-sm font-semibold text-foreground">
             Model training performance on {datasetLabel}
           </p>
           <BatchMetricsSection
-            baseline={sharedMetrics.baseline}
-            proposed={sharedMetrics.proposed}
+            metrics={sharedMetrics}
             datasetLabel={datasetLabel}
           />
         </div>
@@ -310,13 +305,16 @@ function GroupSummary({ title, color, files }: {
 
 // ── Batch metrics section — shown once for all files ─────────────────────────
 
-function BatchMetricsSection({ baseline, proposed, datasetLabel }: {
-  baseline: ModelMetricEntry
-  proposed: ModelMetricEntry
+function BatchMetricsSection({ metrics, datasetLabel }: {
+  metrics: TrainingMetrics
   datasetLabel: string
 }) {
-  const [[b_tn, b_fp], [b_fn, b_tp]] = baseline.confusion_matrix
-  const [[p_tn, p_fp], [p_fn, p_tp]] = proposed.confusion_matrix
+  const models = [
+    { label: "Baseline XGBoost", key: "baseline" as const, color: "bg-slate-400" },
+    { label: "XGBoost DART", key: "dart" as const, color: "bg-blue-400" },
+    { label: "XGBoost DART-IBL", key: "proposed" as const, color: "bg-primary" },
+    { label: "XGBoost DART-IBL (Base HPs)", key: "proposed_base_hp" as const, color: "bg-purple-400" },
+  ].filter(m => metrics[m.key])
 
   return (
     <div className="space-y-4 rounded-xl border border-border bg-muted/10 p-5">
@@ -326,11 +324,11 @@ function BatchMetricsSection({ baseline, proposed, datasetLabel }: {
         <Badge variant="secondary" className="ml-auto text-[10px]">{datasetLabel}</Badge>
       </div>
 
-      {/* Four metric comparison cards */}
+      {/* Metric comparison cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {METRIC_KEYS.map(({ key, label }) => {
-          const bv = baseline[key]
-          const pv = proposed[key]
+          const bv = metrics.baseline[key]
+          const pv = metrics.proposed[key]
           const diff = pv - bv
           return (
             <Card key={key} className="border bg-card shadow-sm">
@@ -348,22 +346,21 @@ function BatchMetricsSection({ baseline, proposed, datasetLabel }: {
                   </span>
                 </div>
                 <div className="space-y-3">
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Baseline</span>
-                      <span className="font-mono">{bv}%</span>
-                    </div>
-                    <Progress value={bv} className="h-1.5 bg-muted" />
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span className="font-bold">Optimized</span>
-                      <span className="font-mono font-bold">{pv}%</span>
-                    </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                      <div className="h-full rounded-full bg-primary/90" style={{ width: `${pv}%` }} />
-                    </div>
-                  </div>
+                  {models.map(m => {
+                    const val = metrics[m.key]![key]
+                    const isProposed = m.key === "proposed"
+                    return (
+                      <div key={m.key} className="space-y-1">
+                        <div className="flex justify-between text-[10px]">
+                          <span className={isProposed ? "font-bold" : "text-muted-foreground"}>{m.label}</span>
+                          <span className={isProposed ? "font-mono font-bold" : "font-mono"}>{val}%</span>
+                        </div>
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                          <div className={cn("h-full rounded-full", m.color)} style={{ width: `${val}%` }} />
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -371,41 +368,37 @@ function BatchMetricsSection({ baseline, proposed, datasetLabel }: {
         })}
       </div>
 
-      {/* Confusion matrices side by side */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {[
-          { label: "Baseline XGBoost", tp: b_tp, tn: b_tn, fp: b_fp, fn: b_fn },
-          { label: "Optimized XGBoost (DART+IBL)", tp: p_tp, tn: p_tn, fp: p_fp, fn: p_fn },
-        ].map(({ label, tp, tn, fp, fn }) => (
-          <div key={label} className="rounded-lg border bg-card p-4">
-            <div className="mb-3 flex items-center gap-2">
-              <Activity className="h-4 w-4 text-muted-foreground" />
-              <p className="text-xs font-semibold">{label}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded border bg-emerald-500/10 border-emerald-500/20 p-2 text-center">
-                <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">{tp}</p>
-                <p className="text-[10px] text-muted-foreground">True Positives</p>
-                <p className="text-[9px] text-muted-foreground">(Correct ADHD)</p>
+      {/* Confusion matrices */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {models.map((m) => {
+          const [[tn, fp], [fn, tp]] = metrics[m.key]!.confusion_matrix
+          return (
+            <div key={m.label} className="rounded-lg border bg-card p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <Activity className="h-4 w-4 text-muted-foreground" />
+                <p className="text-xs font-semibold">{m.label}</p>
               </div>
-              <div className="rounded border bg-emerald-500/10 border-emerald-500/20 p-2 text-center">
-                <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">{tn}</p>
-                <p className="text-[10px] text-muted-foreground">True Negatives</p>
-                <p className="text-[9px] text-muted-foreground">(Correct Control)</p>
-              </div>
-              <div className="rounded border bg-red-500/10 border-red-500/20 p-2 text-center">
-                <p className="text-lg font-bold text-red-700 dark:text-red-400">{fn}</p>
-                <p className="text-[10px] text-muted-foreground">False Negatives</p>
-                <p className="text-[9px] text-muted-foreground">(Missed ADHD)</p>
-              </div>
-              <div className="rounded border bg-orange-500/10 border-orange-500/20 p-2 text-center">
-                <p className="text-lg font-bold text-orange-700 dark:text-orange-400">{fp}</p>
-                <p className="text-[10px] text-muted-foreground">False Positives</p>
-                <p className="text-[9px] text-muted-foreground">(Wrong ADHD)</p>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded border bg-emerald-500/10 border-emerald-500/20 p-2 text-center">
+                  <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">{tp}</p>
+                  <p className="text-[10px] text-muted-foreground">TP</p>
+                </div>
+                <div className="rounded border bg-emerald-500/10 border-emerald-500/20 p-2 text-center">
+                  <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">{tn}</p>
+                  <p className="text-[10px] text-muted-foreground">TN</p>
+                </div>
+                <div className="rounded border bg-red-500/10 border-red-500/20 p-2 text-center">
+                  <p className="text-lg font-bold text-red-700 dark:text-red-400">{fn}</p>
+                  <p className="text-[10px] text-muted-foreground">FN</p>
+                </div>
+                <div className="rounded border bg-orange-500/10 border-orange-500/20 p-2 text-center">
+                  <p className="text-lg font-bold text-orange-700 dark:text-orange-400">{fp}</p>
+                  <p className="text-[10px] text-muted-foreground">FP</p>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
     </div>
