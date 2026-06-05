@@ -8,7 +8,7 @@ import ProcessingStatusPanel from '../components/processing-status'
 import ResultsView from '../components/results-view'
 import type { ClassificationResult, DatasetKey, DatasetDetail } from '../types'
 
-const API = import.meta.env.PROD ? '/api' : 'http://localhost:8000'
+const API = import.meta.env.PROD ? 'https://adhd-classification.onrender.com' : 'http://localhost:8000'
 
 export default function Demo() {
   const [files, setFiles] = useState<File[]>([])
