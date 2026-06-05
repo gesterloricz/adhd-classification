@@ -83,7 +83,7 @@ export default function EEGViewer({
   }
 
   const majorInterval = getTimeIntervals()
-  const timePoints = []
+  const timePoints: number[] = []
   for (let t = 0; t <= duration; t += majorInterval) {
     timePoints.push(t)
   }

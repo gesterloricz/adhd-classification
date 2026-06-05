@@ -13,7 +13,7 @@ import {
   AlertDialogCancel, AlertDialogAction,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import type { ClassificationResult, ModelMetricEntry, TrainingMetrics } from "../types"
+import type { ClassificationResult, TrainingMetrics } from "../types"
 import { cn } from "@/lib/utils"
 import EEGViewer from "./eeg-viewer"
 

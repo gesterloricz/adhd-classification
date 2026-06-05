@@ -1,22 +1,20 @@
 import { useState } from "react"
 import {
   Users, RotateCcw, Loader2, ChevronDown, ChevronUp,
-  AlertTriangle, CheckCircle2, FileText, Brain, Info,
+  AlertTriangle, CheckCircle2, Brain,
   Activity, BarChart3, ArrowUpRight, ArrowDownRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
 import {
   AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
   AlertDialogTitle, AlertDialogDescription, AlertDialogFooter,
   AlertDialogCancel, AlertDialogAction,
 } from "@/components/ui/alert-dialog"
-import type { ClassificationResult, ModelMetricEntry, TrainingMetrics } from "../types"
+import type { ClassificationResult, TrainingMetrics } from "../types"
 import { cn } from "@/lib/utils"
 import SingleResultView from "./single-result-view"
-import EEGViewer from "./eeg-viewer"
 
 const METRIC_KEYS = [
   { key: "accuracy" as const, label: "Accuracy" },
@@ -273,35 +271,7 @@ function StatBox({ label, value, color }: {
   )
 }
 
-// ── Group summary ─────────────────────────────────────────────────────────────
 
-function GroupSummary({ title, color, files }: {
-  title: string; color: "orange" | "emerald"; files: ClassificationResult[]
-}) {
-  const isOrange = color === "orange"
-  return (
-    <Card className={cn("border-2 shadow-sm", isOrange ? "border-orange-200 dark:border-orange-900/40" : "border-emerald-200 dark:border-emerald-900/40")}>
-      <CardHeader className="pb-3">
-        <CardTitle className={cn("flex items-center gap-2 text-base", isOrange ? "text-orange-700 dark:text-orange-400" : "text-emerald-700 dark:text-emerald-400")}>
-          {isOrange ? <AlertTriangle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
-          {title}
-          <Badge variant="outline" className="ml-auto text-xs">{files.length} file{files.length !== 1 ? "s" : ""}</Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-2">
-          {files.map(r => (
-            <div key={r.filename} className={cn("flex items-center gap-2 rounded-lg border px-3 py-2 text-xs", isOrange ? "border-orange-200 bg-orange-50 dark:border-orange-900/30 dark:bg-orange-950/10" : "border-emerald-200 bg-emerald-50 dark:border-emerald-900/30 dark:bg-emerald-950/10")}>
-              <FileText className="h-3 w-3 flex-shrink-0 opacity-60" />
-              <span className="font-medium">{r.filename}</span>
-              <span className="font-mono opacity-60">{r.proposed_confidence.toFixed(1)}%</span>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
 
 // ── Batch metrics section — shown once for all files ─────────────────────────
 
